@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #62005c;
+    --primary-container: #801d78;
+    --secondary: #bb0027;
+    --secondary-container: #e51a38;
+    --surface-canvas: #f8fafc;
+    --surface-card: #ffffff;
+    --surface-container-low: #eff4ff;
+    --surface-container: #e5eeff;
+    --surface-container-high: #dce9ff;
+    --on-surface: #0b1c30;
+    --on-surface-variant: #52424d;
+    --transit-purple-deep: #6a1b78;
+    --transit-red-accent: #d85c27;
+    --occupancy-seats: #16a34a;
+    --occupancy-seats-bg: #dcfce7;
+    --occupancy-standing: #d97706;
+    --occupancy-standing-bg: #fef3c7;
+    --occupancy-limited: #dc2626;
+    --occupancy-limited-bg: #fee2e2;
+    --bus-wheelchair: #0284c7;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc;
+    color: #0b1c30;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Custom Design Tokens Classes */
+.bg-primary { background-color: #62005c; }
+.bg-primary-container { background-color: #801d78; }
+.text-primary { color: #62005c; }
+.text-primary-container { color: #801d78; }
+.hover\:bg-primary:hover { background-color: #62005c; }
+.hover\:bg-primary-container:hover { background-color: #801d78; }
+.hover\:bg-transit-purple-deep:hover { background-color: #6a1b78; }
+
+.bg-surface-canvas { background-color: #f8fafc; }
+.bg-surface-card { background-color: #ffffff; }
+.bg-surface-container-low { background-color: #eff4ff; }
+.bg-surface-container { background-color: #e5eeff; }
+.bg-surface-container-high { background-color: #dce9ff; }
+.hover\:bg-surface-container:hover { background-color: #e5eeff; }
+.hover\:bg-surface-container-low:hover { background-color: #eff4ff; }
+.hover\:bg-surface-container-high:hover { background-color: #dce9ff; }
+
+.text-on-surface { color: #0b1c30; }
+.text-on-surface-variant { color: #52424d; }
+.text-on-secondary { color: #ffffff; }
+.text-on-primary { color: #ffffff; }
+
+.bg-transit-red-accent { background-color: #d85c27; }
+.text-transit-red-accent { color: #d85c27; }
+
+.text-occupancy-seats { color: #16a34a; }
+.bg-occupancy-seats { background-color: #16a34a; }
+.bg-occupancy-seats-bg { background-color: #dcfce7; }
+
+.text-occupancy-standing { color: #d97706; }
+.bg-occupancy-standing { background-color: #d97706; }
+.bg-occupancy-standing-bg { background-color: #fef3c7; }
+
+.text-occupancy-limited { color: #dc2626; }
+.bg-occupancy-limited { background-color: #dc2626; }
+.bg-occupancy-limited-bg { background-color: #fee2e2; }
+
+.text-bus-wheelchair { color: #0284c7; }
+.bg-bus-wheelchair { background-color: #0284c7; }
+
+.font-service-number-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 32px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.font-service-number-md {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 24px;
+  line-height: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.font-timing-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  line-height: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-display-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-headline-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.font-headline-sm {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.font-label-lg {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.font-label-md {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.font-label-xs {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Hide scrollbar for clean horizontal quick chips */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

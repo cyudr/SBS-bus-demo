@@ -1,0 +1,6 @@
+{
+  "name": "SBS Transit Bus Tracker Live",
+  "description": "Real-time bus arrival timings, route progression, live vehicle telemetry, and route planning for SBS Transit commuters in Singapore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
