@@ -26,12 +26,25 @@ interface LtaTrainAlertData {
   LinesStatus?: { line: string; code: string; status: string; headway: string }[];
 }
 
+interface LtaCarpark {
+  CarParkID: string;
+  Area: string;
+  Development: string;
+  Location: string;
+  AvailableLots: number;
+  LotType: string;
+  Agency: string;
+}
+
 export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
-  const [activeTab, setActiveTab] = useState<'train' | 'traffic' | 'bus'>('train');
+  const [activeTab, setActiveTab] = useState<'train' | 'traffic' | 'carpark' | 'bus'>('train');
   const [trafficIncidents, setTrafficIncidents] = useState<LtaTrafficIncident[]>([]);
   const [trainAlerts, setTrainAlerts] = useState<LtaTrainAlertData | null>(null);
+  const [carparks, setCarparks] = useState<LtaCarpark[]>([]);
+  const [carparkAreaFilter, setCarparkAreaFilter] = useState<string>('All');
   const [isLiveTraffic, setIsLiveTraffic] = useState<boolean>(false);
   const [isLiveTrain, setIsLiveTrain] = useState<boolean>(false);
+  const [isLiveCarparks, setIsLiveCarparks] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   const [healthInfo, setHealthInfo] = useState<{
@@ -69,6 +82,14 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
         const trainJson = await trainRes.json();
         setTrainAlerts(trainJson.value || null);
         setIsLiveTrain(trainJson.isLive === true);
+      }
+
+      // 4. Fetch Carpark Availability (HDB + LTA + URA)
+      const carparkRes = await fetch('/api/carpark-availability').catch(() => null);
+      if (carparkRes && carparkRes.ok) {
+        const carparkJson = await carparkRes.json();
+        setCarparks(carparkJson.value || []);
+        setIsLiveCarparks(carparkJson.isLive === true);
       }
 
       setLastRefreshed(new Date().toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' SGT');
@@ -183,6 +204,25 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
               activeTab === 'traffic' ? 'bg-white text-[#801d78]' : 'bg-[#801d78] text-white'
             }`}>
               {trafficIncidents.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('carpark')}
+          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-['Inter'] text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'carpark'
+              ? 'bg-[#801d78] text-white shadow-sm'
+              : 'text-[#52424d] hover:text-[#0b1c30] hover:bg-white/60'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">local_parking</span>
+          <span>Live Carparks (HDB+LTA)</span>
+          {carparks.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              activeTab === 'carpark' ? 'bg-white text-[#801d78]' : 'bg-[#801d78] text-white'
+            }`}>
+              {carparks.length}
             </span>
           )}
         </button>
@@ -366,6 +406,95 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
               );
             })
           )}
+        </div>
+      )}
+
+      {/* Tab: Live Carpark Lots (HDB + LTA + URA) */}
+      {activeTab === 'carpark' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#0b1c30]">
+                Live Carpark Lots ({carparks.length} Hubs Monitored)
+              </span>
+              <p className="text-xs text-[#52424d]">
+                Source: https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2
+              </p>
+            </div>
+
+            {/* Quick Area Filters */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              {(['All', 'Orchard', 'Somerset', 'Dhoby Ghaut', 'Bedok', 'Clementi'] as const).map((area) => (
+                <button
+                  key={area}
+                  onClick={() => setCarparkAreaFilter(area)}
+                  className={`px-3 py-1 rounded-full font-['Inter'] text-xs font-bold transition-all shrink-0 ${
+                    carparkAreaFilter === area
+                      ? 'bg-[#801d78] text-white shadow-xs'
+                      : 'bg-[#eff4ff] text-[#0b1c30] hover:bg-[#e5eeff]'
+                  }`}
+                >
+                  {area}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {carparks
+              .filter((cp) => carparkAreaFilter === 'All' || cp.Area.toLowerCase().includes(carparkAreaFilter.toLowerCase()) || cp.Development.toLowerCase().includes(carparkAreaFilter.toLowerCase()))
+              .map((cp) => {
+                const lots = cp.AvailableLots ?? 0;
+                const lotColor = lots > 150 ? 'text-[#16A34A]' : lots > 50 ? 'text-[#D97706]' : 'text-[#DC2626]';
+                const lotBg = lots > 150 ? 'bg-[#DCFCE7]' : lots > 50 ? 'bg-[#FEF3C7]' : 'bg-[#FEE2E2]';
+
+                return (
+                  <div
+                    key={cp.CarParkID}
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-[#e5eeff] flex items-center justify-between hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#eff4ff] text-[#801d78] flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[20px]">local_parking</span>
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#0b1c30] truncate">
+                            {cp.Development}
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded font-bold bg-[#eff4ff] text-[#801d78] uppercase">
+                            {cp.Agency || 'LTA'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-[#52424d] truncate mt-0.5">
+                          Area: {cp.Area} • ID: {cp.CarParkID}
+                        </span>
+                        {cp.Location && (
+                          <a
+                            href={`https://maps.google.com/?q=${cp.Location.replace(' ', ',')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-[#801d78] hover:underline font-semibold flex items-center gap-0.5 mt-1"
+                          >
+                            <span>Navigate via GPS</span>
+                            <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end shrink-0 pl-3">
+                      <div className={`px-2.5 py-1 rounded-xl font-['Plus_Jakarta_Sans'] font-extrabold text-base ${lotBg} ${lotColor} tabular-nums`}>
+                        {lots}
+                      </div>
+                      <span className="text-[10px] text-[#52424d] mt-0.5 font-medium">
+                        Lots Available
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
 

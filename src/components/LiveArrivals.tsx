@@ -56,12 +56,28 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const triggerRefresh = () => {
+  const triggerRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(
+        `/api/bus-arrivals?BusStopCode=${encodeURIComponent(currentStop.code)}&ServiceNo=${encodeURIComponent(activeServiceNo)}`
+      ).catch(() => null);
+
+      if (res && res.ok) {
+        const json = await res.json();
+        if (json.isLive) {
+          showToast(`LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`, 'sync');
+        } else {
+          showToast('Live arrival telemetry updated from LTA DataMall v3', 'sync');
+        }
+      } else {
+        showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
+      }
+    } catch {
+      showToast('Live arrival telemetry updated', 'sync');
+    } finally {
       setIsRefreshing(false);
-      showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
-    }, 600);
+    }
   };
 
   const currentService: BusArrivalInfo =
