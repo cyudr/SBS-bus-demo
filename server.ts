@@ -246,6 +246,7 @@ app.get('/api/bus-arrivals', async (req: Request, res: Response) => {
             OriginCode: '09023',
             DestinationCode: '84009',
             EstimatedArrival: new Date(Date.now() + 45000).toISOString(),
+            Monitored: 1,
             Load: 'SEA',
             Feature: 'WAB',
             Type: 'DD',
@@ -255,6 +256,7 @@ app.get('/api/bus-arrivals', async (req: Request, res: Response) => {
             OriginCode: '09023',
             DestinationCode: '84009',
             EstimatedArrival: new Date(Date.now() + 7 * 60000).toISOString(),
+            Monitored: 1,
             Load: 'SDA',
             Feature: 'WAB',
             Type: 'SD',
@@ -264,6 +266,7 @@ app.get('/api/bus-arrivals', async (req: Request, res: Response) => {
             OriginCode: '09023',
             DestinationCode: '84009',
             EstimatedArrival: new Date(Date.now() + 16 * 60000).toISOString(),
+            Monitored: 1,
             Load: 'LSD',
             Feature: 'WAB',
             Type: 'DD',
@@ -323,17 +326,26 @@ app.get('/api/bus-arrivals', async (req: Request, res: Response) => {
 app.get('/api/carpark-availability', async (req: Request, res: Response) => {
   const accountKey = getLtaAccountKey();
   const areaFilter = (req.query.Area || req.query.area || '') as string;
+  const lotTypeFilter = (req.query.LotType || req.query.lotType || '') as string;
+  const agencyFilter = (req.query.Agency || req.query.agency || '') as string;
+
+  const filterLots = (items: typeof FALLBACK_CARPARKS) => {
+    return items.filter((cp) => {
+      const matchArea = !areaFilter || areaFilter === 'All' ||
+        cp.Area?.toLowerCase().includes(areaFilter.toLowerCase()) ||
+        cp.Development?.toLowerCase().includes(areaFilter.toLowerCase());
+      const matchType = !lotTypeFilter || lotTypeFilter === 'All' || cp.LotType === lotTypeFilter;
+      const matchAgency = !agencyFilter || agencyFilter === 'All' || cp.Agency === agencyFilter;
+      return matchArea && matchType && matchAgency;
+    });
+  };
 
   if (!accountKey) {
-    let list = FALLBACK_CARPARKS;
-    if (areaFilter) {
-      list = list.filter((cp) => cp.Area.toLowerCase().includes(areaFilter.toLowerCase()));
-    }
     return res.json({
       source: 'fallback',
       isLive: false,
       message: 'LTA_ACCOUNT_KEY not configured; serving simulated real-time carpark lots.',
-      value: list,
+      value: filterLots(FALLBACK_CARPARKS),
     });
   }
 
@@ -355,22 +367,18 @@ app.get('/api/carpark-availability', async (req: Request, res: Response) => {
         source: 'fallback',
         isLive: false,
         error: `LTA DataMall HTTP ${response.status}`,
-        value: FALLBACK_CARPARKS,
+        value: filterLots(FALLBACK_CARPARKS),
       });
     }
 
     const data = await response.json();
-    let lots = data.value || [];
-    if (areaFilter && Array.isArray(lots)) {
-      lots = lots.filter((c: { Area?: string }) =>
-        c.Area?.toLowerCase().includes(areaFilter.toLowerCase())
-      );
-    }
+    const rawLots = Array.isArray(data.value) ? data.value : [];
+    const lots = filterLots(rawLots.length > 0 ? rawLots : FALLBACK_CARPARKS);
 
     return res.json({
       source: 'lta-datamall-live',
       isLive: true,
-      value: lots.length > 0 ? lots : FALLBACK_CARPARKS,
+      value: lots,
     });
   } catch (error: unknown) {
     const errMessage = error instanceof Error ? error.message : String(error);
@@ -379,7 +387,7 @@ app.get('/api/carpark-availability', async (req: Request, res: Response) => {
       source: 'fallback',
       isLive: false,
       error: errMessage,
-      value: FALLBACK_CARPARKS,
+      value: filterLots(FALLBACK_CARPARKS),
     });
   }
 });

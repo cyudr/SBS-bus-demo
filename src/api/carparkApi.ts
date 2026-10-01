@@ -6,11 +6,14 @@ import { LtaCarparkResponse } from './types';
  * @param area Optional region filter (e.g. 'Orchard', 'Somerset', 'Bedok')
  */
 export async function fetchCarparkAvailability(
-  area?: string
+  area?: string,
+  lotType?: string,
+  agency?: string
 ): Promise<LtaCarparkResponse> {
-  let url = '/api/carpark-availability';
-  if (area && area !== 'All') {
-    url += `?Area=${encodeURIComponent(area)}`;
-  }
-  return apiClient<LtaCarparkResponse>(url);
+  const params = new URLSearchParams();
+  if (area && area !== 'All') params.set('Area', area);
+  if (lotType && lotType !== 'All') params.set('LotType', lotType);
+  if (agency && agency !== 'All') params.set('Agency', agency);
+  const qs = params.toString();
+  return apiClient<LtaCarparkResponse>(`/api/carpark-availability${qs ? `?${qs}` : ''}`);
 }

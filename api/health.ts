@@ -8,7 +8,7 @@ export default async function handler(req: IncomingMessage & { query?: Record<st
   let ltaConnected = false;
   let ltaStatusMessage = hasKey
     ? 'Testing LTA DataMall connection...'
-    : 'LTA_ACCOUNT_KEY / LTA_DATAMALL_API_KEY not configured in Vercel environment (serving simulated telemetry)';
+    : 'LTA_ACCOUNT_KEY not configured in Vercel environment (serving simulated telemetry)';
 
   if (hasKey) {
     try {
