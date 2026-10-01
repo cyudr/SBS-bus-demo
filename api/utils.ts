@@ -50,18 +50,22 @@ export const FALLBACK_TRAFFIC_INCIDENTS = [
 ];
 
 export const FALLBACK_TRAIN_ALERTS = {
-  Status: 1,
-  Line: 'All Lines',
-  Direction: 'Both',
-  Stations: '',
-  FreePublicBus: 'No free bus bridging required. All lines operating normally.',
-  FreeMRTShuttle: '',
-  MRTShuttleDirection: '',
+  Status: 1, // 1 = Normal Train Service / Minor Delays, 2 = Disrupted Train Service / Major Delays
+  AffectedSegments: [] as Array<{
+    Line: string;
+    Direction: string;
+    Stations: string;
+    FreePublicBus?: string;
+    FreeMRTShuttle?: string;
+    MRTShuttleDirection?: string;
+  }>,
   Message: [
     {
       Content: 'All SBS Transit & SMRT train lines (North-South, East-West, North East, Circle, Downtown, Thomson-East Coast) are operating normally on scheduled headways.',
+      CreatedDate: new Date().toISOString(),
     },
   ],
+  // Convenience line overview for passenger dashboard
   LinesStatus: [
     { line: 'North South Line (NSL)', code: 'NS', status: 'Normal', headway: '2-4 mins' },
     { line: 'East West Line (EWL)', code: 'EW', status: 'Normal', headway: '2-4 mins' },

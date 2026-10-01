@@ -62,18 +62,21 @@ const FALLBACK_TRAFFIC_INCIDENTS = [
   },
 ];
 
-// Fallback Train Service Alerts (Normal operational status)
+// Fallback Train Service Alerts (Normal operational status, Annex C compliant)
 const FALLBACK_TRAIN_ALERTS = {
-  Status: 1, // 1 = Normal, 2 = Disrupted
-  Line: 'All Lines',
-  Direction: 'Both',
-  Stations: '',
-  FreePublicBus: 'No free bus bridging required. All lines operating normally.',
-  FreeMRTShuttle: '',
-  MRTShuttleDirection: '',
+  Status: 1, // 1 = Normal Train Service / Minor Delays, 2 = Disrupted Train Service / Major Delays
+  AffectedSegments: [] as Array<{
+    Line: string;
+    Direction: string;
+    Stations: string;
+    FreePublicBus?: string;
+    FreeMRTShuttle?: string;
+    MRTShuttleDirection?: string;
+  }>,
   Message: [
     {
       Content: 'All SBS Transit & SMRT train lines (North-South, East-West, North East, Circle, Downtown, Thomson-East Coast) are operating normally on scheduled headways.',
+      CreatedDate: new Date().toISOString(),
     },
   ],
   LinesStatus: [

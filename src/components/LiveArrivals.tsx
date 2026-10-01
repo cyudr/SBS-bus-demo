@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BUS_SERVICES,
   BUS_STOPS,
@@ -6,7 +6,26 @@ import {
   BusStop,
   TRANSLATIONS,
 } from '../data/transitData';
-import { fetchBusArrivals } from '../api';
+import {
+  fetchBusArrivals,
+  formatLtaBusDuration,
+  formatLtaLoad,
+  LtaBusArrivalNextBus,
+} from '../api';
+
+interface LiveArrivalDisplayItem {
+  etaDisplay: string;
+  etaSub: string;
+  occupancy: string;
+  occupancyPercent: number;
+  type: string;
+  wab: boolean;
+  monitored: 0 | 1 | number;
+  vehiclePlate: string;
+  locationStatus: string;
+  loadCode: string;
+  isAvailable: boolean;
+}
 
 interface LiveArrivalsProps {
   currentStop: BusStop;
@@ -38,12 +57,102 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
   const [countdown, setCountdown] = useState<number>(18);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
+  const [liveArrivals, setLiveArrivals] = useState<LiveArrivalDisplayItem[] | null>(null);
+  const [isLiveFromApi, setIsLiveFromApi] = useState<boolean>(false);
+
   // Sync search input when service changes
   useEffect(() => {
     setSearchInput(activeServiceNo);
   }, [activeServiceNo]);
 
-  // Telemetry countdown simulation
+  const triggerRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await fetchBusArrivals(currentStop.code, activeServiceNo);
+      setIsLiveFromApi(data.isLive === true);
+
+      // Find the service in LTA DataMall response
+      const targetService =
+        data.Services?.find(
+          (s) => s.ServiceNo.toUpperCase() === activeServiceNo.toUpperCase()
+        ) || data.Services?.[0];
+
+      if (targetService) {
+        const nextBuses: (LtaBusArrivalNextBus | undefined)[] = [
+          targetService.NextBus,
+          targetService.NextBus2,
+          targetService.NextBus3,
+        ];
+
+        const mapped: LiveArrivalDisplayItem[] = nextBuses.map((nb, i) => {
+          if (!nb || !nb.EstimatedArrival) {
+            return {
+              etaDisplay: 'No Est.',
+              etaSub: 'Available',
+              occupancy: 'Not In Operation',
+              occupancyPercent: 0,
+              type: 'Single Deck',
+              wab: false,
+              monitored: 0,
+              vehiclePlate: '--',
+              locationStatus: 'Not In Operation',
+              loadCode: 'NA',
+              isAvailable: false,
+            };
+          }
+
+          const dur = formatLtaBusDuration(nb.EstimatedArrival);
+          const load = formatLtaLoad(nb.Load);
+          const busType =
+            nb.Type === 'DD'
+              ? 'Double Deck'
+              : nb.Type === 'BD'
+              ? 'Bendy Bus'
+              : 'Single Deck';
+          const isMonitored = (nb.Monitored ?? 1) === 1;
+
+          return {
+            etaDisplay: dur.display,
+            etaSub: dur.subText,
+            occupancy: load.label,
+            occupancyPercent:
+              nb.Load === 'LSD' ? 88 : nb.Load === 'SDA' ? 62 : 28,
+            type: busType,
+            wab: nb.Feature === 'WAB',
+            monitored: (nb.Monitored ?? 1) as 0 | 1,
+            vehiclePlate: `SBS ${7000 + i * 117 + (parseInt(targetService.ServiceNo) || 24)}R`,
+            locationStatus: isMonitored
+              ? dur.isArrived
+                ? 'Arriving at bus bay'
+                : 'Live GPS Monitored'
+              : 'Scheduled Estimate',
+            loadCode: load.code,
+            isAvailable: true,
+          };
+        });
+
+        setLiveArrivals(mapped);
+      }
+
+      if (data.isLive) {
+        showToast(
+          `LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`,
+          'sync'
+        );
+      } else {
+        showToast(
+          'Live arrival telemetry updated from LTA DataMall v3',
+          'sync'
+        );
+      }
+    } catch {
+      showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [currentStop.code, activeServiceNo, showToast]);
+
+  // Telemetry countdown simulation (20-second LTA refresh cycle)
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -55,23 +164,12 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [triggerRefresh]);
 
-  const triggerRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await fetchBusArrivals(currentStop.code, activeServiceNo);
-      if (data.isLive) {
-        showToast(`LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`, 'sync');
-      } else {
-        showToast('Live arrival telemetry updated from LTA DataMall v3', 'sync');
-      }
-    } catch {
-      showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  // Trigger arrival fetch on stop or service change
+  useEffect(() => {
+    triggerRefresh();
+  }, [triggerRefresh]);
 
   const currentService: BusArrivalInfo =
     BUS_SERVICES[activeServiceNo] || BUS_SERVICES['14'];
@@ -444,26 +542,35 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {currentService.arrivals.map((arr, idx) => {
+              {(liveArrivals || currentService.arrivals).map((arr: any, idx: number) => {
                 const label = idx === 0 ? t.firstBus : idx === 1 ? t.secondBus : t.thirdBus;
                 const isImminent = arr.etaDisplay === 'Arr';
+                const isNotOperating = arr.etaDisplay === 'No Est.' || arr.isAvailable === false;
+                const monitoredVal = arr.monitored ?? 1;
+
                 const loadColor =
-                  arr.occupancy === 'Seats Available'
+                  arr.occupancy?.includes('Seats')
                     ? '#16A34A'
-                    : arr.occupancy === 'Standing Available'
+                    : arr.occupancy?.includes('Standing') && !arr.occupancy?.includes('Limited')
                     ? '#D97706'
+                    : isNotOperating
+                    ? '#94A3B8'
                     : '#DC2626';
                 const loadBg =
-                  arr.occupancy === 'Seats Available'
+                  arr.occupancy?.includes('Seats')
                     ? 'bg-[#DCFCE7]'
-                    : arr.occupancy === 'Standing Available'
+                    : arr.occupancy?.includes('Standing') && !arr.occupancy?.includes('Limited')
                     ? 'bg-[#FEF3C7]'
+                    : isNotOperating
+                    ? 'bg-[#F1F5F9]'
                     : 'bg-[#FEE2E2]';
                 const loadBorder =
-                  arr.occupancy === 'Seats Available'
+                  arr.occupancy?.includes('Seats')
                     ? 'bg-[#16A34A]'
-                    : arr.occupancy === 'Standing Available'
+                    : arr.occupancy?.includes('Standing') && !arr.occupancy?.includes('Limited')
                     ? 'bg-[#D97706]'
+                    : isNotOperating
+                    ? 'bg-[#CBD5E1]'
                     : 'bg-[#DC2626]';
 
                 return (
@@ -475,14 +582,41 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
 
                     <div className="flex items-start justify-between">
                       <div className="flex flex-col">
-                        <span className="font-['Inter'] text-[10px] uppercase tracking-wider text-[#52424d] font-bold">
-                          {label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-['Inter'] text-[10px] uppercase tracking-wider text-[#52424d] font-bold">
+                            {label}
+                          </span>
+                          {/* Schedule vs Live GPS Indicator (Section 5, Page 20) */}
+                          {!isNotOperating && (
+                            monitoredVal === 0 ? (
+                              <span
+                                className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#FEF3C7] text-[#D97706] flex items-center gap-0.5"
+                                title="Arrival time is based on schedule from operators and may be subject to changes"
+                              >
+                                <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                Schedule
+                              </span>
+                            ) : (
+                              <span
+                                className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#DCFCE7] text-[#16A34A] flex items-center gap-0.5"
+                                title="Arrival time estimated based on live bus GPS location"
+                              >
+                                <span className="material-symbols-outlined text-[10px]">sensors</span>
+                                GPS Live
+                              </span>
+                            )
+                          )}
+                        </div>
+
                         <div className="flex items-baseline gap-1 mt-0.5">
                           <span
-                            className={`font-['Plus_Jakarta_Sans'] text-[36px] sm:text-[40px] font-extrabold tracking-tight tabular-nums ${
+                            className={`font-['Plus_Jakarta_Sans'] ${
+                              isNotOperating ? 'text-[24px] sm:text-[28px]' : 'text-[36px] sm:text-[40px]'
+                            } font-extrabold tracking-tight tabular-nums ${
                               isImminent
                                 ? 'text-[#16A34A] animate-pulse'
+                                : isNotOperating
+                                ? 'text-[#64748B]'
                                 : 'text-[#0b1c30]'
                             }`}
                           >
@@ -490,7 +624,11 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
                           </span>
                           <span
                             className={`font-['Inter'] text-xs font-bold uppercase ${
-                              isImminent ? 'text-[#16A34A]' : 'text-[#0b1c30]'
+                              isImminent
+                                ? 'text-[#16A34A]'
+                                : isNotOperating
+                                ? 'text-[#64748B]'
+                                : 'text-[#0b1c30]'
                             }`}
                           >
                             {arr.etaSub}
@@ -517,7 +655,7 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
                       <div className="flex items-center justify-between text-[#0b1c30] font-['Inter'] text-xs">
                         <span className="flex items-center gap-1 font-semibold">
                           <span className="material-symbols-outlined text-[16px] text-[#62005c]">
-                            {arr.type.includes('Double')
+                            {arr.type?.includes('Double')
                               ? 'airport_shuttle'
                               : 'directions_bus'}
                           </span>
@@ -526,7 +664,7 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
                         {arr.wab && (
                           <span
                             className="text-[#0284C7] font-bold flex items-center gap-0.5 text-[10px]"
-                            title="Wheelchair Accessible Bus"
+                            title="Wheelchair Accessible Bus (WAB)"
                           >
                             <span className="material-symbols-outlined text-[13px]">
                               accessible
@@ -544,9 +682,9 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
                             style={{ color: loadColor }}
                           >
                             <span className="material-symbols-outlined text-[13px]">
-                              {arr.occupancy === 'Seats Available'
+                              {arr.occupancy?.includes('Seats')
                                 ? 'airline_seat_recline_normal'
-                                : arr.occupancy === 'Standing Available'
+                                : arr.occupancy?.includes('Standing') && !arr.occupancy?.includes('Limited')
                                 ? 'groups'
                                 : 'person_off'}
                             </span>

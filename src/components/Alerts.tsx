@@ -21,6 +21,8 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
   const [trainAlerts, setTrainAlerts] = useState<LtaTrainAlertData | null>(null);
   const [carparks, setCarparks] = useState<LtaCarparkLot[]>([]);
   const [carparkAreaFilter, setCarparkAreaFilter] = useState<string>('All');
+  const [carparkLotType, setCarparkLotType] = useState<'All' | 'C' | 'Y' | 'H'>('All');
+  const [carparkAgency, setCarparkAgency] = useState<'All' | 'LTA' | 'HDB' | 'URA'>('All');
   const [isLiveTraffic, setIsLiveTraffic] = useState<boolean>(false);
   const [isLiveTrain, setIsLiveTrain] = useState<boolean>(false);
   const [isLiveCarparks, setIsLiveCarparks] = useState<boolean>(false);
@@ -233,29 +235,75 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
               </span>
             </div>
 
-            {/* Overall Status Banner */}
-            <div className="mt-4 p-4 rounded-xl bg-[#DCFCE7] border border-[#bbf7d0] flex items-start gap-3">
-              <span className="material-symbols-outlined text-[#16A34A] text-[22px] shrink-0 mt-0.5">
-                check_circle
-              </span>
-              <div>
-                <div className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#166534]">
-                  {trainAlerts?.Status === 1
-                    ? 'Regular Train Service Across All Lines'
-                    : 'Train Disruption in Progress'}
+            {/* Overall Status Banner (Annex C Specification) */}
+            {trainAlerts?.Status === 2 || (trainAlerts?.AffectedSegments && trainAlerts.AffectedSegments.length > 0) ? (
+              <div className="mt-4 p-4 rounded-xl bg-[#FEE2E2] border border-[#fca5a5] flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-[#DC2626] text-[24px] shrink-0 mt-0.5 animate-pulse">
+                    error
+                  </span>
+                  <div>
+                    <div className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#991B1B]">
+                      Train Disruption in Progress (LTA Contingency Mode Active)
+                    </div>
+                    {trainAlerts?.Message && trainAlerts.Message.length > 0 && (
+                      <p className="text-xs text-[#991B1B] mt-1 leading-relaxed">
+                        {trainAlerts.Message[0].Content}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-[#166534] mt-0.5">
-                  {trainAlerts?.Message && trainAlerts.Message.length > 0
-                    ? trainAlerts.Message[0].Content
-                    : 'All SBS Transit Downtown Line (DTL), North East Line (NEL), and SMRT lines operating without delay.'}
-                </p>
-                {trainAlerts?.FreePublicBus && (
-                  <p className="text-[11px] text-[#166534]/80 mt-1 font-medium">
-                    Bridge Bus Notice: {trainAlerts.FreePublicBus}
-                  </p>
+
+                {/* Affected Segments per Annex C */}
+                {trainAlerts?.AffectedSegments && trainAlerts.AffectedSegments.length > 0 && (
+                  <div className="mt-2 space-y-2 border-t border-[#f87171]/30 pt-2">
+                    <span className="font-['Inter'] text-[11px] font-bold text-[#991B1B] uppercase tracking-wider">
+                      Affected Segments & Bridging Bus
+                    </span>
+                    {trainAlerts.AffectedSegments.map((seg, idx) => (
+                      <div key={idx} className="bg-white/80 rounded-lg p-2.5 text-xs text-[#0b1c30] space-y-1">
+                        <div className="flex items-center gap-2 font-bold text-[#801d78]">
+                          <span className="bg-[#801d78] text-white px-1.5 py-0.5 rounded text-[10px]">
+                            {seg.Line}
+                          </span>
+                          <span>Direction: {seg.Direction}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-[#52424d]">Affected Stations: </span>
+                          <span className="font-mono text-[#DC2626] font-bold">{seg.Stations}</span>
+                        </div>
+                        {seg.FreePublicBus && (
+                          <div className="text-[11px] text-[#166534] font-medium bg-[#DCFCE7] px-2 py-0.5 rounded">
+                            🚌 Free Regular Bus Boarding: {seg.FreePublicBus}
+                          </div>
+                        )}
+                        {seg.FreeMRTShuttle && (
+                          <div className="text-[11px] text-[#1E40AF] font-medium bg-[#DBEAFE] px-2 py-0.5 rounded">
+                            🚆 Free MRT Shuttle ({seg.MRTShuttleDirection || seg.Direction}): {seg.FreeMRTShuttle}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
+            ) : (
+              <div className="mt-4 p-4 rounded-xl bg-[#DCFCE7] border border-[#bbf7d0] flex items-start gap-3">
+                <span className="material-symbols-outlined text-[#16A34A] text-[22px] shrink-0 mt-0.5">
+                  check_circle
+                </span>
+                <div>
+                  <div className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#166534]">
+                    Regular Train Service Across All Lines
+                  </div>
+                  <p className="text-xs text-[#166534] mt-0.5">
+                    {trainAlerts?.Message && trainAlerts.Message.length > 0
+                      ? trainAlerts.Message[0].Content
+                      : 'All SBS Transit Downtown Line (DTL), North East Line (NEL), and SMRT lines operating without delay.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Individual MRT Lines Matrix */}
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -399,31 +447,93 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
               </p>
             </div>
 
-            {/* Quick Area Filters */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-              {(['All', 'Orchard', 'Somerset', 'Dhoby Ghaut', 'Bedok', 'Clementi'] as const).map((area) => (
-                <button
-                  key={area}
-                  onClick={() => setCarparkAreaFilter(area)}
-                  className={`px-3 py-1 rounded-full font-['Inter'] text-xs font-bold transition-all shrink-0 ${
-                    carparkAreaFilter === area
-                      ? 'bg-[#801d78] text-white shadow-xs'
-                      : 'bg-[#eff4ff] text-[#0b1c30] hover:bg-[#e5eeff]'
-                  }`}
-                >
-                  {area}
-                </button>
-              ))}
+            {/* Multi-attribute Filters: Area, Lot Type, Agency (Section 2.12, Page 34) */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Quick Area Filters */}
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                {(['All', 'Orchard', 'Somerset', 'Dhoby Ghaut', 'Bedok', 'Clementi'] as const).map((area) => (
+                  <button
+                    key={area}
+                    onClick={() => setCarparkAreaFilter(area)}
+                    className={`px-2.5 py-1 rounded-full font-['Inter'] text-[11px] font-bold transition-all shrink-0 ${
+                      carparkAreaFilter === area
+                        ? 'bg-[#801d78] text-white shadow-xs'
+                        : 'bg-[#eff4ff] text-[#0b1c30] hover:bg-[#e5eeff]'
+                    }`}
+                  >
+                    {area}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lot Type Filter */}
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-[#e5eeff] text-[11px]">
+                <span className="text-[#52424d] font-bold px-1.5">Type:</span>
+                {[
+                  { id: 'All', label: 'All' },
+                  { id: 'C', label: 'Cars' },
+                  { id: 'Y', label: 'Motorcycles' },
+                  { id: 'H', label: 'Heavy' },
+                ].map((lt) => (
+                  <button
+                    key={lt.id}
+                    onClick={() => setCarparkLotType(lt.id as any)}
+                    className={`px-2 py-0.5 rounded font-bold transition-all ${
+                      carparkLotType === lt.id
+                        ? 'bg-[#801d78] text-white'
+                        : 'text-[#52424d] hover:text-[#0b1c30]'
+                    }`}
+                  >
+                    {lt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Agency Filter */}
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-[#e5eeff] text-[11px]">
+                <span className="text-[#52424d] font-bold px-1.5">Agency:</span>
+                {(['All', 'LTA', 'HDB', 'URA'] as const).map((ag) => (
+                  <button
+                    key={ag}
+                    onClick={() => setCarparkAgency(ag)}
+                    className={`px-2 py-0.5 rounded font-bold transition-all ${
+                      carparkAgency === ag
+                        ? 'bg-[#801d78] text-white'
+                        : 'text-[#52424d] hover:text-[#0b1c30]'
+                    }`}
+                  >
+                    {ag}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {carparks
-              .filter((cp) => carparkAreaFilter === 'All' || cp.Area.toLowerCase().includes(carparkAreaFilter.toLowerCase()) || cp.Development.toLowerCase().includes(carparkAreaFilter.toLowerCase()))
+              .filter((cp) => {
+                const matchesArea =
+                  carparkAreaFilter === 'All' ||
+                  cp.Area?.toLowerCase().includes(carparkAreaFilter.toLowerCase()) ||
+                  cp.Development.toLowerCase().includes(carparkAreaFilter.toLowerCase());
+                const matchesType =
+                  carparkLotType === 'All' || cp.LotType === carparkLotType;
+                const matchesAgency =
+                  carparkAgency === 'All' || cp.Agency === carparkAgency;
+                return matchesArea && matchesType && matchesAgency;
+              })
               .map((cp) => {
                 const lots = cp.AvailableLots ?? 0;
                 const lotColor = lots > 150 ? 'text-[#16A34A]' : lots > 50 ? 'text-[#D97706]' : 'text-[#DC2626]';
                 const lotBg = lots > 150 ? 'bg-[#DCFCE7]' : lots > 50 ? 'bg-[#FEF3C7]' : 'bg-[#FEE2E2]';
+                const vehicleIcon =
+                  cp.LotType === 'Y'
+                    ? 'two_wheeler'
+                    : cp.LotType === 'H'
+                    ? 'local_shipping'
+                    : 'directions_car';
+                const typeLabel =
+                  cp.LotType === 'Y' ? 'Motorcycle' : cp.LotType === 'H' ? 'Heavy Vehicle' : 'Car';
 
                 return (
                   <div
@@ -432,7 +542,7 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-[#eff4ff] text-[#801d78] flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-[20px]">local_parking</span>
+                        <span className="material-symbols-outlined text-[20px]">{vehicleIcon}</span>
                       </div>
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -442,9 +552,12 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
                           <span className="text-[9px] px-1.5 py-0.2 rounded font-bold bg-[#eff4ff] text-[#801d78] uppercase">
                             {cp.Agency || 'LTA'}
                           </span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded font-bold bg-slate-100 text-slate-700">
+                            {typeLabel}
+                          </span>
                         </div>
                         <span className="text-xs text-[#52424d] truncate mt-0.5">
-                          Area: {cp.Area} • ID: {cp.CarParkID}
+                          {cp.Area ? `Area: ${cp.Area} • ` : ''}ID: {cp.CarParkID}
                         </span>
                         {cp.Location && (
                           <a
@@ -453,7 +566,7 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
                             rel="noopener noreferrer"
                             className="text-[10px] text-[#801d78] hover:underline font-semibold flex items-center gap-0.5 mt-1"
                           >
-                            <span>Navigate via GPS</span>
+                            <span>Navigate via GPS ({cp.Location})</span>
                             <span className="material-symbols-outlined text-[11px]">open_in_new</span>
                           </a>
                         )}
