@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { BUS_STOPS, BusStop } from './data/transitData';
 import { Header } from './components/Header';
 import { Toast } from './components/Toast';
@@ -42,17 +42,17 @@ export default function App() {
     show: false,
   });
 
-  const showToast = (message: string, icon = 'check_circle') => {
+  const showToast = useCallback((message: string, icon = 'check_circle') => {
     setToast({ message, icon, show: true });
     setTimeout(() => {
       setToast((prev) => ({ ...prev, show: false }));
     }, 2800);
-  };
+  }, []);
 
   const currentStop: BusStop = BUS_STOPS[currentStopCode] || BUS_STOPS['09023'];
   const isBookmarked = savedServices.includes(activeServiceNo);
 
-  const toggleBookmark = () => {
+  const toggleBookmark = useCallback(() => {
     if (isBookmarked) {
       setSavedServices((prev) => prev.filter((s) => s !== activeServiceNo));
       showToast(`Removed Bus ${activeServiceNo} from saved favorites`, 'bookmark_remove');
@@ -60,9 +60,9 @@ export default function App() {
       setSavedServices((prev) => [...prev, activeServiceNo]);
       showToast(`Bus ${activeServiceNo} saved to favorites!`, 'star');
     }
-  };
+  }, [isBookmarked, activeServiceNo, showToast]);
 
-  const handleSetAlarm = (minutes: number, soundEnabled: boolean) => {
+  const handleSetAlarm = useCallback((minutes: number, soundEnabled: boolean) => {
     setActiveAlarmMinutes(minutes);
     if (soundEnabled && typeof window !== 'undefined' && 'AudioContext' in window) {
       try {
@@ -85,14 +85,14 @@ export default function App() {
       `Push alarm active: We will alert you ${minutes} mins before Bus ${activeServiceNo} arrives!`,
       'notifications_active'
     );
-  };
+  }, [activeServiceNo, showToast]);
 
-  const handleCancelAlarm = () => {
+  const handleCancelAlarm = useCallback(() => {
     setActiveAlarmMinutes(null);
     showToast(`Arrival alarm cancelled for Bus ${activeServiceNo}`, 'notifications_off');
-  };
+  }, [activeServiceNo, showToast]);
 
-  const handleSelectStop = (stop: BusStop) => {
+  const handleSelectStop = useCallback((stop: BusStop) => {
     setCurrentStopCode(stop.code);
     if (stop.services.length > 0) {
       // Pick first service of this stop if current service isn't there
@@ -102,13 +102,13 @@ export default function App() {
       }
     }
     showToast(`Current stop updated to ${stop.name} (${stop.code})`, 'near_me');
-  };
+  }, [activeServiceNo, showToast]);
 
-  const handleTrackBus = (serviceNo: string) => {
+  const handleTrackBus = useCallback((serviceNo: string) => {
     setActiveServiceNo(serviceNo);
     setActiveTab('live-arrivals');
     showToast(`Now tracking SBS Bus ${serviceNo} live`, 'directions_bus');
-  };
+  }, [showToast]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0b1c30]">

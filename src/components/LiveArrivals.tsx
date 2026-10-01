@@ -65,7 +65,7 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
     setSearchInput(activeServiceNo);
   }, [activeServiceNo]);
 
-  const triggerRefresh = useCallback(async () => {
+  const triggerRefresh = useCallback(async (notify = false) => {
     setIsRefreshing(true);
     try {
       const data = await fetchBusArrivals(currentStop.code, activeServiceNo);
@@ -134,42 +134,49 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
         setLiveArrivals(mapped);
       }
 
-      if (data.isLive) {
-        showToast(
-          `LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`,
-          'sync'
-        );
-      } else {
-        showToast(
-          'Live arrival telemetry updated from LTA DataMall v3',
-          'sync'
-        );
+      if (notify) {
+        if (data.isLive) {
+          showToast(
+            `LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`,
+            'sync'
+          );
+        } else {
+          showToast(
+            'Live arrival telemetry updated from LTA DataMall v3',
+            'sync'
+          );
+        }
       }
     } catch {
-      showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
+      if (notify) {
+        showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
+      }
     } finally {
       setIsRefreshing(false);
     }
   }, [currentStop.code, activeServiceNo, showToast]);
 
-  // Telemetry countdown simulation (20-second LTA refresh cycle)
+  // 1-second visual countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          triggerRefresh();
-          return 20;
-        }
-        return prev - 1;
-      });
+      setCountdown((prev) => (prev <= 1 ? 20 : prev - 1));
     }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 20-second automatic background refresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      triggerRefresh(false);
+    }, 20000);
     return () => clearInterval(timer);
   }, [triggerRefresh]);
 
   // Trigger arrival fetch on stop or service change
   useEffect(() => {
-    triggerRefresh();
-  }, [triggerRefresh]);
+    triggerRefresh(false);
+    setCountdown(20);
+  }, [currentStop.code, activeServiceNo, triggerRefresh]);
 
   const currentService: BusArrivalInfo =
     BUS_SERVICES[activeServiceNo] || BUS_SERVICES['14'];
@@ -363,7 +370,7 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
               <button
                 onClick={() => {
                   setCountdown(20);
-                  triggerRefresh();
+                  triggerRefresh(true);
                 }}
                 className={`w-5 h-5 rounded-full hover:bg-white flex items-center justify-center text-[#52424d] transition-transform ${
                   isRefreshing ? 'animate-spin' : ''
