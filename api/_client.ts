@@ -187,3 +187,61 @@ export async function fetchTrainAlerts(): Promise<LtaTrainAlertsResponse> {
 export async function checkApiHealth(): Promise<LtaApiHealthResponse> {
   return apiFetch<LtaApiHealthResponse>('/api/health');
 }
+
+export interface RoutePlanStep {
+  type: 'walk' | 'bus' | 'mrt';
+  serviceNo?: string;
+  operator?: string;
+  line?: string;
+  originCode?: string;
+  destinationCode?: string;
+  instruction: string;
+  detail: string;
+  durationMins: number;
+  liveArrival?: {
+    etaDisplay: string;
+    subText: string;
+    load: string;
+    type: string;
+    wab: boolean;
+    monitored: 0 | 1 | number;
+  };
+}
+
+export interface RoutePlanOption {
+  id: string;
+  tag: 'Direct Bus' | 'Fastest' | 'Fewest Transfers';
+  title: string;
+  durationMins: number;
+  walkingMins: number;
+  fare: string;
+  steps: RoutePlanStep[];
+}
+
+export interface RoutePlanResponse {
+  status: string;
+  origin: string;
+  destination: string;
+  preference: string;
+  totalPlans: number;
+  plans: RoutePlanOption[];
+  error?: string;
+}
+
+/**
+ * Fetch inter-modal route plans with live bus arrival integration
+ */
+export async function fetchRoutePlan(
+  origin?: string,
+  destination?: string,
+  preference?: string
+): Promise<RoutePlanResponse> {
+  const params = new URLSearchParams();
+  if (origin) params.append('origin', origin);
+  if (destination) params.append('destination', destination);
+  if (preference && preference !== 'All') params.append('preference', preference);
+
+  const qs = params.toString();
+  const url = qs ? `/api/route-plan?${qs}` : '/api/route-plan';
+  return apiFetch<RoutePlanResponse>(url);
+}

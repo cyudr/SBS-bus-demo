@@ -3,18 +3,18 @@ import { getLtaAccountKey } from './_utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const accountKey = getLtaAccountKey();
+    const accountKey = getLtaAccountKey(req);
     const hasKey = accountKey.length > 0;
 
     let ltaConnected = false;
     let ltaStatusMessage = hasKey
       ? 'Testing LTA DataMall connection...'
-      : 'LTA_ACCOUNT_KEY not configured in Vercel environment (serving simulated telemetry)';
+      : 'LTA_ACCOUNT_KEY not configured (serving simulated telemetry)';
 
     if (hasKey) {
       try {
         const testRes = await fetch(
-          'https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts',
+          'https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode=83139',
           {
             headers: {
               'AccountKey': accountKey,

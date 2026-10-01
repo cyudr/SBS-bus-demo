@@ -3,8 +3,26 @@
  * Leading underscore ensures Vercel ignores this file for route deployment
  */
 
-export function getLtaAccountKey(): string {
+export function getLtaAccountKey(req?: {
+  headers?: Record<string, string | string[] | undefined>;
+  query?: Record<string, string | string[] | undefined>;
+}): string {
+  const reqHeader = (
+    req?.headers?.['accountkey'] ||
+    req?.headers?.['AccountKey'] ||
+    req?.headers?.['account-key'] ||
+    req?.headers?.['x-account-key']
+  ) as string | undefined;
+
+  const reqQuery = (
+    req?.query?.['AccountKey'] ||
+    req?.query?.['accountkey'] ||
+    req?.query?.['accountKey']
+  ) as string | undefined;
+
   return (
+    reqHeader ||
+    reqQuery ||
     process.env.LTA_ACCOUNT_KEY ||
     process.env.LTA_DATAMALL_API_KEY ||
     process.env.SBS_API_KEY ||

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getLtaAccountKey, FALLBACK_CARPARKS } from './_utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const accountKey = getLtaAccountKey();
+  const accountKey = getLtaAccountKey(req);
   const areaFilter = (req.query.Area || req.query.area || '') as string;
   const lotTypeFilter = (req.query.LotType || req.query.lotType || '') as string;
   const agencyFilter = (req.query.Agency || req.query.agency || '') as string;

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getLtaAccountKey, generateBusArrivalFallback } from './_utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const accountKey = getLtaAccountKey();
+  const accountKey = getLtaAccountKey(req);
   const busStopCode = (req.query.BusStopCode || req.query.busStopCode || '20251') as string;
   const serviceNo = (req.query.ServiceNo || req.query.serviceNo || '') as string;
 
