@@ -1,52 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getLtaAccountKey } from './_utils';
+import { getLtaAccountKey, generateBusArrivalFallback } from './_utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const accountKey = getLtaAccountKey();
-  const busStopCode = (req.query.BusStopCode || req.query.busStopCode || '09023') as string;
+  const busStopCode = (req.query.BusStopCode || req.query.busStopCode || '20251') as string;
   const serviceNo = (req.query.ServiceNo || req.query.serviceNo || '') as string;
 
   const getFallback = () => ({
     source: 'fallback',
     isLive: false,
     message: 'LTA_ACCOUNT_KEY not configured in Vercel environment; serving simulated high-fidelity telemetry.',
-    BusStopCode: busStopCode,
-    Services: [
-      {
-        ServiceNo: serviceNo || '14',
-        Operator: 'SBST',
-        NextBus: {
-          OriginCode: '09023',
-          DestinationCode: '84009',
-          EstimatedArrival: new Date(Date.now() + 45000).toISOString(),
-          Monitored: 1,
-          Load: 'SEA',
-          Feature: 'WAB',
-          Type: 'DD',
-          VisitNumber: '1',
-        },
-        NextBus2: {
-          OriginCode: '09023',
-          DestinationCode: '84009',
-          EstimatedArrival: new Date(Date.now() + 7 * 60000).toISOString(),
-          Monitored: 1,
-          Load: 'SDA',
-          Feature: 'WAB',
-          Type: 'SD',
-          VisitNumber: '1',
-        },
-        NextBus3: {
-          OriginCode: '09023',
-          DestinationCode: '84009',
-          EstimatedArrival: new Date(Date.now() + 16 * 60000).toISOString(),
-          Monitored: 1,
-          Load: 'LSD',
-          Feature: 'WAB',
-          Type: 'DD',
-          VisitNumber: '1',
-        },
-      },
-    ],
+    ...generateBusArrivalFallback(busStopCode, serviceNo),
   });
 
   if (!accountKey) {

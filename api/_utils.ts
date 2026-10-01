@@ -13,6 +13,231 @@ export function getLtaAccountKey(): string {
   ).trim();
 }
 
+/**
+ * Generate official LTA DataMall v3 BusArrival mock fallback matching user reference
+ */
+export function generateBusArrivalFallback(busStopCode: string = '20251', serviceNo?: string) {
+  const allServices = [
+    {
+      ServiceNo: '176',
+      Operator: 'SMRT',
+      NextBus: {
+        OriginCode: '10009',
+        DestinationCode: '45009',
+        EstimatedArrival: new Date(Date.now() + 45000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.3100396666666667',
+        Longitude: '103.75647683333334',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus2: {
+        OriginCode: '10009',
+        DestinationCode: '45009',
+        EstimatedArrival: new Date(Date.now() + 15 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.27424',
+        Longitude: '103.79662333333333',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus3: {
+        OriginCode: '10009',
+        DestinationCode: '45009',
+        EstimatedArrival: new Date(Date.now() + 22 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.278829',
+        Longitude: '103.81719033333333',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'SD',
+      },
+    },
+    {
+      ServiceNo: '30',
+      Operator: 'SBST',
+      NextBus: {
+        OriginCode: '84009',
+        DestinationCode: '22009',
+        EstimatedArrival: new Date(Date.now() + 90000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.3144378333333333',
+        Longitude: '103.75299533333333',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus2: {
+        OriginCode: '84009',
+        DestinationCode: '22009',
+        EstimatedArrival: new Date(Date.now() + 5 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.3090805',
+        Longitude: '103.76039283333333',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'SD',
+      },
+      NextBus3: {
+        OriginCode: '84009',
+        DestinationCode: '22009',
+        EstimatedArrival: new Date(Date.now() + 24 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.2757191666666667',
+        Longitude: '103.793202',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+    },
+    {
+      ServiceNo: '78',
+      Operator: 'TTS',
+      NextBus: {
+        OriginCode: '29009',
+        DestinationCode: '29009',
+        EstimatedArrival: new Date(Date.now() + 4 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.3087378333333333',
+        Longitude: '103.73379016666667',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus2: {
+        OriginCode: '29009',
+        DestinationCode: '29009',
+        EstimatedArrival: new Date(Date.now() + 26 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.312363',
+        Longitude: '103.76434116666667',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus3: {
+        OriginCode: '',
+        DestinationCode: '',
+        EstimatedArrival: '',
+        Monitored: 0,
+        Latitude: '',
+        Longitude: '',
+        VisitNumber: '',
+        Load: '',
+        Feature: '',
+        Type: '',
+      },
+    },
+    {
+      ServiceNo: '14',
+      Operator: 'SBST',
+      NextBus: {
+        OriginCode: '09023',
+        DestinationCode: '84009',
+        EstimatedArrival: new Date(Date.now() + 40000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.3025',
+        Longitude: '103.8340',
+        VisitNumber: '1',
+        Load: 'SEA',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+      NextBus2: {
+        OriginCode: '09023',
+        DestinationCode: '84009',
+        EstimatedArrival: new Date(Date.now() + 7 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.2980',
+        Longitude: '103.8400',
+        VisitNumber: '1',
+        Load: 'SDA',
+        Feature: 'WAB',
+        Type: 'SD',
+      },
+      NextBus3: {
+        OriginCode: '09023',
+        DestinationCode: '84009',
+        EstimatedArrival: new Date(Date.now() + 16 * 60000).toISOString(),
+        Monitored: 1,
+        Latitude: '1.2900',
+        Longitude: '103.8500',
+        VisitNumber: '1',
+        Load: 'LSD',
+        Feature: 'WAB',
+        Type: 'DD',
+      },
+    },
+  ];
+
+  let filtered = allServices;
+  if (serviceNo) {
+    const match = allServices.find((s) => s.ServiceNo.toUpperCase() === serviceNo.toUpperCase());
+    if (match) {
+      filtered = [match];
+    } else {
+      filtered = [
+        {
+          ServiceNo: serviceNo,
+          Operator: 'SBST',
+          NextBus: {
+            OriginCode: busStopCode,
+            DestinationCode: '99999',
+            EstimatedArrival: new Date(Date.now() + 3 * 60000).toISOString(),
+            Monitored: 1,
+            Latitude: '1.3000',
+            Longitude: '103.8400',
+            VisitNumber: '1',
+            Load: 'SEA',
+            Feature: 'WAB',
+            Type: 'DD',
+          },
+          NextBus2: {
+            OriginCode: busStopCode,
+            DestinationCode: '99999',
+            EstimatedArrival: new Date(Date.now() + 11 * 60000).toISOString(),
+            Monitored: 1,
+            Latitude: '1.2950',
+            Longitude: '103.8450',
+            VisitNumber: '1',
+            Load: 'SDA',
+            Feature: 'WAB',
+            Type: 'SD',
+          },
+          NextBus3: {
+            OriginCode: '',
+            DestinationCode: '',
+            EstimatedArrival: '',
+            Monitored: 0,
+            Latitude: '',
+            Longitude: '',
+            VisitNumber: '',
+            Load: '',
+            Feature: '',
+            Type: '',
+          },
+        },
+      ];
+    }
+  }
+
+  return {
+    'odata.metadata': 'https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival',
+    BusStopCode: busStopCode,
+    Services: filtered,
+  };
+}
+
 export const FALLBACK_TRAFFIC_INCIDENTS = [
   {
     Type: 'Roadwork',

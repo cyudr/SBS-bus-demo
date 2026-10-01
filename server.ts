@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateBusArrivalFallback } from './api/_utils';
 
 dotenv.config();
 
@@ -229,52 +230,18 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // Upstream: https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode=83139&ServiceNo=15
 app.get('/api/bus-arrivals', async (req: Request, res: Response) => {
   const accountKey = getLtaAccountKey();
-  const busStopCode = (req.query.BusStopCode || req.query.busStopCode || '09023') as string;
+  const busStopCode = (req.query.BusStopCode || req.query.busStopCode || '20251') as string;
   const serviceNo = (req.query.ServiceNo || req.query.serviceNo || '') as string;
 
+  const getFallback = () => ({
+    source: 'fallback',
+    isLive: false,
+    message: 'LTA_ACCOUNT_KEY not configured; serving simulated high-fidelity telemetry.',
+    ...generateBusArrivalFallback(busStopCode, serviceNo),
+  });
+
   if (!accountKey) {
-    return res.json({
-      source: 'fallback',
-      isLive: false,
-      message: 'LTA_ACCOUNT_KEY not configured; serving simulated high-fidelity telemetry.',
-      BusStopCode: busStopCode,
-      Services: [
-        {
-          ServiceNo: serviceNo || '14',
-          Operator: 'SBST',
-          NextBus: {
-            OriginCode: '09023',
-            DestinationCode: '84009',
-            EstimatedArrival: new Date(Date.now() + 45000).toISOString(),
-            Monitored: 1,
-            Load: 'SEA',
-            Feature: 'WAB',
-            Type: 'DD',
-            VisitNumber: '1',
-          },
-          NextBus2: {
-            OriginCode: '09023',
-            DestinationCode: '84009',
-            EstimatedArrival: new Date(Date.now() + 7 * 60000).toISOString(),
-            Monitored: 1,
-            Load: 'SDA',
-            Feature: 'WAB',
-            Type: 'SD',
-            VisitNumber: '1',
-          },
-          NextBus3: {
-            OriginCode: '09023',
-            DestinationCode: '84009',
-            EstimatedArrival: new Date(Date.now() + 16 * 60000).toISOString(),
-            Monitored: 1,
-            Load: 'LSD',
-            Feature: 'WAB',
-            Type: 'DD',
-            VisitNumber: '1',
-          },
-        },
-      ],
-    });
+    return res.json(getFallback());
   }
 
   try {
