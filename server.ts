@@ -82,6 +82,61 @@ const FALLBACK_TRAIN_ALERTS = {
   ],
 };
 
+// API: Health & Connection Check
+// Target Endpoint: /api/health
+app.get('/api/health', async (req: Request, res: Response) => {
+  const accountKey = getLtaAccountKey();
+  const hasKey = accountKey.length > 0;
+
+  let ltaConnected = false;
+  let ltaStatusMessage = 'LTA_DATAMALL_API_KEY / SBS_API_KEY not configured';
+  let trafficHttpCode: number | null = null;
+  let trainHttpCode: number | null = null;
+
+  if (hasKey) {
+    try {
+      // Test live connection to LTA DataMall TrainServiceAlerts
+      const testRes = await fetch('https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts', {
+        headers: {
+          'AccountKey': accountKey,
+          'accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      trainHttpCode = testRes.status;
+      if (testRes.ok) {
+        ltaConnected = true;
+        ltaStatusMessage = 'Connected to LTA DataMall (HTTP 200 OK)';
+      } else {
+        ltaStatusMessage = `LTA DataMall responded with HTTP ${testRes.status}`;
+      }
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      ltaStatusMessage = `Connection check error: ${err}`;
+    }
+  }
+
+  res.json({
+    status: 'ok',
+    healthy: true,
+    timestamp: new Date().toISOString(),
+    apiKeyConfigured: hasKey,
+    ltaDataMallConnected: ltaConnected,
+    ltaStatusMessage,
+    headerRequired: 'AccountKey: LTA_DATAMALL_API_KEY',
+    targetEndpoints: {
+      trafficIncidents: 'https://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents',
+      trainServiceAlerts: 'https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts',
+    },
+    localProxies: {
+      trafficIncidents: '/api/traffic-incidents',
+      trainAlerts: '/api/train-alerts',
+      health: '/api/health',
+    },
+  });
+});
+
 // API: System & Key Status Check
 app.get('/api/status', (req: Request, res: Response) => {
   const key = getLtaAccountKey();
@@ -91,6 +146,7 @@ app.get('/api/status', (req: Request, res: Response) => {
     keyMasked: key.length > 4 ? `${key.substring(0, 4)}...${key.substring(key.length - 2)}` : null,
     provider: 'LTA DataMall v2',
     endpoints: [
+      '/api/health',
       '/api/traffic-incidents',
       '/api/train-alerts',
       '/api/bus-arrivals'

@@ -34,17 +34,25 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
   const [isLiveTrain, setIsLiveTrain] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+  const [healthInfo, setHealthInfo] = useState<{
+    healthy?: boolean;
+    apiKeyConfigured?: boolean;
+    ltaDataMallConnected?: boolean;
+    ltaStatusMessage?: string;
+    headerRequired?: string;
+  } | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>('Just now');
   const [selectedFilter, setSelectedFilter] = useState<'All' | 'Trunk' | 'Diversion' | 'Downtown Line' | 'General'>('All');
 
   const fetchLtaData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 1. Check system status
-      const statusRes = await fetch('/api/status').catch(() => null);
-      if (statusRes && statusRes.ok) {
-        const statusJson = await statusRes.json();
-        setHasApiKey(statusJson.hasApiKey);
+      // 1. Connection check via /api/health
+      const healthRes = await fetch('/api/health').catch(() => null);
+      if (healthRes && healthRes.ok) {
+        const healthJson = await healthRes.json();
+        setHasApiKey(healthJson.apiKeyConfigured === true);
+        setHealthInfo(healthJson);
       }
 
       // 2. Fetch Traffic Incidents
@@ -82,39 +90,66 @@ export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
   return (
     <div className="max-w-[1024px] w-full mx-auto px-4 md:px-8 py-6 flex flex-col gap-6">
       {/* Top Advisory Banner with DataMall Source Status */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#e5eeff] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[24px]">verified</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#0b1c30]">
-                Transit & Network Operations Center
-              </h2>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                hasApiKey ? 'bg-[#DCFCE7] text-[#16A34A]' : 'bg-[#e5eeff] text-[#62005c]'
-              }`}>
-                {hasApiKey ? 'LTA DataMall API: Connected' : 'LTA DataMall: Sandbox Mode'}
-              </span>
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#e5eeff] flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[24px]">verified</span>
             </div>
-            <p className="text-xs text-[#52424d] mt-0.5">
-              Live telemetry via Land Transport Authority (LTA) TrafficIncidents & TrainServiceAlerts feeds
-            </p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#0b1c30]">
+                  Transit & Network Operations Center
+                </h2>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                  healthInfo?.ltaDataMallConnected
+                    ? 'bg-[#DCFCE7] text-[#16A34A]'
+                    : hasApiKey
+                    ? 'bg-[#eff4ff] text-[#801d78]'
+                    : 'bg-[#e5eeff] text-[#62005c]'
+                }`}>
+                  {healthInfo?.ltaDataMallConnected
+                    ? 'LTA DataMall: Live Telemetry Active'
+                    : hasApiKey
+                    ? 'LTA DataMall: Key Configured'
+                    : 'LTA DataMall: High-Fidelity Sandbox'}
+                </span>
+              </div>
+              <p className="text-xs text-[#52424d] mt-0.5">
+                Live telemetry via Land Transport Authority (LTA) TrafficIncidents & TrainServiceAlerts feeds
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={fetchLtaData}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-[#eff4ff] hover:bg-[#801d78] hover:text-white text-[#801d78] font-['Inter'] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#dce9ff]"
+            >
+              <span className={`material-symbols-outlined text-[16px] ${isLoading ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
+              <span>{isLoading ? 'Updating...' : 'Check API Connection'}</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={fetchLtaData}
-            disabled={isLoading}
-            className="px-3.5 py-1.5 rounded-xl bg-[#eff4ff] hover:bg-[#801d78] hover:text-white text-[#801d78] font-['Inter'] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#dce9ff]"
-          >
-            <span className={`material-symbols-outlined text-[16px] ${isLoading ? 'animate-spin' : ''}`}>
-              refresh
+        {/* API Health & Header Diagnostic Metadata */}
+        <div className="pt-2 border-t border-[#e5eeff] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#52424d]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-[#0b1c30]">Health Check:</span>
+            <span className="font-mono bg-[#eff4ff] px-2 py-0.5 rounded text-[10px] text-[#801d78]">
+              GET /api/health
             </span>
-            <span>{isLoading ? 'Updating...' : 'Refresh Feeds'}</span>
-          </button>
+            <span className="text-[#52424d]">|</span>
+            <span className="font-mono bg-[#eff4ff] px-2 py-0.5 rounded text-[10px] text-[#16A34A] font-bold">
+              AccountKey: LTA_DATAMALL_API_KEY
+            </span>
+          </div>
+          <span className="text-[10px] text-[#52424d]">
+            {healthInfo?.ltaStatusMessage || 'Health verified'} • Refreshed: {lastRefreshed}
+          </span>
         </div>
       </div>
 
