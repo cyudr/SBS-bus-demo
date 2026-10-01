@@ -1,95 +1,72 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SERVICE_ALERTS, ServiceAlert } from '../data/transitData';
+import {
+  checkApiHealth,
+  fetchTrafficIncidents,
+  fetchTrainAlerts,
+  fetchCarparkAvailability,
+  LtaTrafficIncidentItem,
+  LtaTrainAlertData,
+  LtaCarparkLot,
+  LtaApiHealthResponse,
+} from '../api';
 
 interface AlertsProps {
   onTrackService?: (serviceNo: string) => void;
 }
 
-interface LtaTrafficIncident {
-  Type: string;
-  Latitude?: number;
-  Longitude?: number;
-  Message: string;
-  Location?: string;
-  Updated?: string;
-}
-
-interface LtaTrainAlertData {
-  Status: number;
-  Line?: string;
-  Direction?: string;
-  Stations?: string;
-  FreePublicBus?: string;
-  FreeMRTShuttle?: string;
-  MRTShuttleDirection?: string;
-  Message?: { Content: string }[];
-  LinesStatus?: { line: string; code: string; status: string; headway: string }[];
-}
-
-interface LtaCarpark {
-  CarParkID: string;
-  Area: string;
-  Development: string;
-  Location: string;
-  AvailableLots: number;
-  LotType: string;
-  Agency: string;
-}
-
 export const Alerts: React.FC<AlertsProps> = ({ onTrackService }) => {
   const [activeTab, setActiveTab] = useState<'train' | 'traffic' | 'carpark' | 'bus'>('train');
-  const [trafficIncidents, setTrafficIncidents] = useState<LtaTrafficIncident[]>([]);
+  const [trafficIncidents, setTrafficIncidents] = useState<LtaTrafficIncidentItem[]>([]);
   const [trainAlerts, setTrainAlerts] = useState<LtaTrainAlertData | null>(null);
-  const [carparks, setCarparks] = useState<LtaCarpark[]>([]);
+  const [carparks, setCarparks] = useState<LtaCarparkLot[]>([]);
   const [carparkAreaFilter, setCarparkAreaFilter] = useState<string>('All');
   const [isLiveTraffic, setIsLiveTraffic] = useState<boolean>(false);
   const [isLiveTrain, setIsLiveTrain] = useState<boolean>(false);
   const [isLiveCarparks, setIsLiveCarparks] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
-  const [healthInfo, setHealthInfo] = useState<{
-    healthy?: boolean;
-    apiKeyConfigured?: boolean;
-    ltaDataMallConnected?: boolean;
-    ltaStatusMessage?: string;
-    headerRequired?: string;
-  } | null>(null);
+  const [healthInfo, setHealthInfo] = useState<LtaApiHealthResponse | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>('Just now');
   const [selectedFilter, setSelectedFilter] = useState<'All' | 'Trunk' | 'Diversion' | 'Downtown Line' | 'General'>('All');
 
   const fetchLtaData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 1. Connection check via /api/health
-      const healthRes = await fetch('/api/health').catch(() => null);
-      if (healthRes && healthRes.ok) {
-        const healthJson = await healthRes.json();
-        setHasApiKey(healthJson.apiKeyConfigured === true);
-        setHealthInfo(healthJson);
+      // 1. Connection check via api/healthApi
+      try {
+        const health = await checkApiHealth();
+        setHasApiKey(health.apiKeyConfigured === true);
+        setHealthInfo(health);
+      } catch (e) {
+        console.warn('API health check error:', e);
       }
 
-      // 2. Fetch Traffic Incidents
-      const trafficRes = await fetch('/api/traffic-incidents').catch(() => null);
-      if (trafficRes && trafficRes.ok) {
-        const trafficJson = await trafficRes.json();
-        setTrafficIncidents(trafficJson.value || []);
-        setIsLiveTraffic(trafficJson.isLive === true);
+      // 2. Fetch Traffic Incidents via api/trafficApi
+      try {
+        const traffic = await fetchTrafficIncidents();
+        setTrafficIncidents(traffic.value || []);
+        setIsLiveTraffic(traffic.isLive === true);
+      } catch (e) {
+        console.warn('API traffic incidents error:', e);
       }
 
-      // 3. Fetch Train Service Alerts
-      const trainRes = await fetch('/api/train-alerts').catch(() => null);
-      if (trainRes && trainRes.ok) {
-        const trainJson = await trainRes.json();
-        setTrainAlerts(trainJson.value || null);
-        setIsLiveTrain(trainJson.isLive === true);
+      // 3. Fetch Train Service Alerts via api/trainApi
+      try {
+        const train = await fetchTrainAlerts();
+        setTrainAlerts(train.value || null);
+        setIsLiveTrain(train.isLive === true);
+      } catch (e) {
+        console.warn('API train alerts error:', e);
       }
 
-      // 4. Fetch Carpark Availability (HDB + LTA + URA)
-      const carparkRes = await fetch('/api/carpark-availability').catch(() => null);
-      if (carparkRes && carparkRes.ok) {
-        const carparkJson = await carparkRes.json();
-        setCarparks(carparkJson.value || []);
-        setIsLiveCarparks(carparkJson.isLive === true);
+      // 4. Fetch Carpark Availability via api/carparkApi
+      try {
+        const cp = await fetchCarparkAvailability();
+        setCarparks(cp.value || []);
+        setIsLiveCarparks(cp.isLive === true);
+      } catch (e) {
+        console.warn('API carpark availability error:', e);
       }
 
       setLastRefreshed(new Date().toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' SGT');

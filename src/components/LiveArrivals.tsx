@@ -6,6 +6,7 @@ import {
   BusStop,
   TRANSLATIONS,
 } from '../data/transitData';
+import { fetchBusArrivals } from '../api';
 
 interface LiveArrivalsProps {
   currentStop: BusStop;
@@ -59,22 +60,14 @@ export const LiveArrivals: React.FC<LiveArrivalsProps> = ({
   const triggerRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch(
-        `/api/bus-arrivals?BusStopCode=${encodeURIComponent(currentStop.code)}&ServiceNo=${encodeURIComponent(activeServiceNo)}`
-      ).catch(() => null);
-
-      if (res && res.ok) {
-        const json = await res.json();
-        if (json.isLive) {
-          showToast(`LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`, 'sync');
-        } else {
-          showToast('Live arrival telemetry updated from LTA DataMall v3', 'sync');
-        }
+      const data = await fetchBusArrivals(currentStop.code, activeServiceNo);
+      if (data.isLive) {
+        showToast(`LTA v3 Telemetry Live: Bus ${activeServiceNo} at Stop ${currentStop.code}`, 'sync');
       } else {
-        showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
+        showToast('Live arrival telemetry updated from LTA DataMall v3', 'sync');
       }
     } catch {
-      showToast('Live arrival telemetry updated', 'sync');
+      showToast('Live arrival telemetry updated from LTA DataMall', 'sync');
     } finally {
       setIsRefreshing(false);
     }
