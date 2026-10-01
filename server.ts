@@ -19,6 +19,9 @@ function getLtaAccountKey(): string {
     process.env.LTA_ACCOUNT_KEY ||
     process.env.LTA_DATAMALL_API_KEY ||
     process.env.SBS_API_KEY ||
+    process.env.VITE_LTA_ACCOUNT_KEY ||
+    process.env.VITE_LTA_DATAMALL_API_KEY ||
+    process.env.VITE_SBS_API_KEY ||
     ''
   ).trim();
 }
