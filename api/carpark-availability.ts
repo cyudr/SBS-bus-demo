@@ -1,15 +1,11 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { URL } from 'url';
-import { getLtaAccountKey, FALLBACK_CARPARKS } from './utils';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getLtaAccountKey, FALLBACK_CARPARKS } from './_utils';
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const accountKey = getLtaAccountKey();
-  const parsedUrl = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
-  const areaFilter = parsedUrl.searchParams.get('Area') || parsedUrl.searchParams.get('area') || '';
-  const lotTypeFilter = parsedUrl.searchParams.get('LotType') || parsedUrl.searchParams.get('lotType') || '';
-  const agencyFilter = parsedUrl.searchParams.get('Agency') || parsedUrl.searchParams.get('agency') || '';
-
-  res.setHeader('Content-Type', 'application/json');
+  const areaFilter = (req.query.Area || req.query.area || '') as string;
+  const lotTypeFilter = (req.query.LotType || req.query.lotType || '') as string;
+  const agencyFilter = (req.query.Agency || req.query.agency || '') as string;
 
   const filterLots = (items: typeof FALLBACK_CARPARKS) => {
     return items.filter((cp) => {
@@ -23,14 +19,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   };
 
   if (!accountKey) {
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'fallback',
       isLive: false,
       message: 'LTA_ACCOUNT_KEY not configured in Vercel environment; serving simulated real-time carpark lots.',
       value: filterLots(FALLBACK_CARPARKS),
-    }));
-    return;
+    });
   }
 
   try {
@@ -46,34 +40,30 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     );
 
     if (!response.ok) {
-      res.statusCode = 200;
-      res.end(JSON.stringify({
+      return res.status(200).json({
         source: 'fallback',
         isLive: false,
         error: `LTA DataMall HTTP ${response.status}`,
-        value: FALLBACK_CARPARKS,
-      }));
-      return;
+        value: filterLots(FALLBACK_CARPARKS),
+      });
     }
 
     const data = await response.json();
     const rawLots = Array.isArray(data.value) ? data.value : [];
     const lots = filterLots(rawLots.length > 0 ? rawLots : FALLBACK_CARPARKS);
 
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'lta-datamall-live',
       isLive: true,
       value: lots,
-    }));
+    });
   } catch (error: unknown) {
     const errMessage = error instanceof Error ? error.message : String(error);
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'fallback',
       isLive: false,
       error: errMessage,
-      value: FALLBACK_CARPARKS,
-    }));
+      value: filterLots(FALLBACK_CARPARKS),
+    });
   }
 }

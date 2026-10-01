@@ -1,11 +1,9 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { getLtaAccountKey } from './utils';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getLtaAccountKey } from './_utils';
 
-export default function handler(req: IncomingMessage, res: ServerResponse) {
+export default function handler(req: VercelRequest, res: VercelResponse) {
   const key = getLtaAccountKey();
-  res.setHeader('Content-Type', 'application/json');
-  res.statusCode = 200;
-  res.end(JSON.stringify({
+  return res.status(200).json({
     status: 'ok',
     environment: 'vercel-serverless',
     hasApiKey: key.length > 0,
@@ -18,5 +16,5 @@ export default function handler(req: IncomingMessage, res: ServerResponse) {
       '/api/traffic-incidents',
       '/api/train-alerts',
     ],
-  }));
+  });
 }

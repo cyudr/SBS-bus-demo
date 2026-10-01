@@ -1,20 +1,16 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { getLtaAccountKey, FALLBACK_TRAFFIC_INCIDENTS } from './utils';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getLtaAccountKey, FALLBACK_TRAFFIC_INCIDENTS } from './_utils';
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const accountKey = getLtaAccountKey();
 
-  res.setHeader('Content-Type', 'application/json');
-
   if (!accountKey) {
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'fallback',
       isLive: false,
       message: 'LTA_ACCOUNT_KEY not configured in Vercel environment; serving simulated high-fidelity telemetry.',
       value: FALLBACK_TRAFFIC_INCIDENTS,
-    }));
-    return;
+    });
   }
 
   try {
@@ -30,31 +26,27 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     );
 
     if (!response.ok) {
-      res.statusCode = 200;
-      res.end(JSON.stringify({
+      return res.status(200).json({
         source: 'fallback',
         isLive: false,
         error: `LTA DataMall HTTP ${response.status}`,
         value: FALLBACK_TRAFFIC_INCIDENTS,
-      }));
-      return;
+      });
     }
 
     const data = await response.json();
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'lta-datamall-live',
       isLive: true,
       value: data.value && data.value.length > 0 ? data.value : FALLBACK_TRAFFIC_INCIDENTS,
-    }));
+    });
   } catch (error: unknown) {
     const errMessage = error instanceof Error ? error.message : String(error);
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return res.status(200).json({
       source: 'fallback',
       isLive: false,
       error: errMessage,
       value: FALLBACK_TRAFFIC_INCIDENTS,
-    }));
+    });
   }
 }

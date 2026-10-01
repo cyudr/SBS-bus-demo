@@ -1,5 +1,6 @@
 /**
- * Vercel Serverless API Utilities & Constants
+ * Vercel Serverless Internal Utility
+ * Leading underscore ensures Vercel ignores this file for route deployment
  */
 
 export function getLtaAccountKey(): string {
@@ -8,8 +9,6 @@ export function getLtaAccountKey(): string {
     process.env.LTA_DATAMALL_API_KEY ||
     process.env.SBS_API_KEY ||
     process.env.VITE_LTA_ACCOUNT_KEY ||
-    process.env.VITE_LTA_DATAMALL_API_KEY ||
-    process.env.VITE_SBS_API_KEY ||
     ''
   ).trim();
 }
@@ -65,7 +64,6 @@ export const FALLBACK_TRAIN_ALERTS = {
       CreatedDate: new Date().toISOString(),
     },
   ],
-  // Convenience line overview for passenger dashboard
   LinesStatus: [
     { line: 'North South Line (NSL)', code: 'NS', status: 'Normal', headway: '2-4 mins' },
     { line: 'East West Line (EWL)', code: 'EW', status: 'Normal', headway: '2-4 mins' },
