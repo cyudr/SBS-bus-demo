@@ -9,7 +9,7 @@ import {
   LtaTrainAlertData,
   LtaCarparkLot,
   LtaApiHealthResponse,
-} from '../api';
+} from '@/api/_client';
 
 interface AlertsProps {
   onTrackService?: (serviceNo: string) => void;

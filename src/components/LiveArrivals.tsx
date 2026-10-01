@@ -11,7 +11,7 @@ import {
   formatLtaBusDuration,
   formatLtaLoad,
   LtaBusArrivalNextBus,
-} from '../api';
+} from '@/api/_client';
 
 interface LiveArrivalDisplayItem {
   etaDisplay: string;
